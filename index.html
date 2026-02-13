@@ -126,6 +126,203 @@
     #alarm-toggle.armed svg { color: #ef4444; }
     #alarm-toggle.alarming { animation: alarmPulse .8s ease-in-out infinite; border-color: rgba(239,68,68,.8) !important; background: rgba(239,68,68,.2) !important; }
 
+
+    /* ═══ LIGHT THEME ═══ */
+    body.light {
+      --bg:      #f1f5f9;
+      --surface: #ffffff;
+      --panel:   #ffffff;
+      --border:  rgba(0,0,0,0.09);
+      --text:    #0f172a;
+      --muted:   #64748b;
+      --accent:  #0284c7;
+      background: var(--bg);
+      color: var(--text);
+    }
+    body.light body::before { display: none; }
+    body.light #app { background: transparent; }
+    body.light header[class*="sticky"],
+    body.light header[class*="border-b"] {
+      background: rgba(241,245,249,.97) !important;
+    }
+    body.light .glass {
+      background: rgba(255,255,255,.92) !important;
+      border-color: rgba(0,0,0,.09) !important;
+    }
+    body.light .gcard {
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    }
+    body.light .gcard::before {
+      background: linear-gradient(135deg,rgba(2,132,199,.25) 0%,rgba(5,150,105,.18) 50%,rgba(79,70,229,.15) 100%);
+    }
+    body.light .stat-card {
+      background: #ffffff;
+      border-color: rgba(0,0,0,.08);
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+    body.light .stat-card:hover {
+      border-color: rgba(2,132,199,.4);
+      box-shadow: 0 8px 24px rgba(2,132,199,.08);
+    }
+    body.light .stat-card .hint { color: var(--accent); }
+    body.light .text-slate-300  { color: #334155 !important; }
+    body.light .text-slate-400  { color: #475569 !important; }
+    body.light .text-slate-500  { color: #64748b !important; }
+    body.light .text-slate-600  { color: #475569 !important; }
+    body.light .text-white      { color: #0f172a !important; }
+    body.light .text-sky-300    { color: #0284c7 !important; }
+    body.light main { background: var(--bg); }
+    body.light .strip-item {
+      background: #f8fafc !important;
+      border-color: rgba(0,0,0,.07) !important;
+    }
+    body.light .chart-wrap {
+      background: #f8fafc !important;
+      border-color: rgba(0,0,0,.08) !important;
+    }
+    body.light #chart-tooltip {
+      background: rgba(255,255,255,.98) !important;
+      border-color: rgba(0,0,0,.12) !important;
+      color: #0f172a;
+    }
+    body.light #tt-time { color: #475569 !important; }
+    body.light #detail-panel { background: #f1f5f9; }
+    body.light #detail-panel header { background: rgba(241,245,249,.97) !important; }
+    body.light .risk-low  { background: linear-gradient(135deg,#d1fae5,#a7f3d0); }
+    body.light .risk-mod  { background: linear-gradient(135deg,#fef3c7,#fde68a); }
+    body.light .risk-high { background: linear-gradient(135deg,#fed7aa,#fdba74); }
+    body.light .risk-ext  { background: linear-gradient(135deg,#fecaca,#fca5a5); }
+    body.light .risk-low  span, body.light .risk-mod  span,
+    body.light .risk-high span, body.light .risk-ext  span { color: #1e293b !important; }
+    body.light .risk-low  p, body.light .risk-mod  p,
+    body.light .risk-high p, body.light .risk-ext  p { color: #1e293b !important; }
+    body.light .risk-badge { border-color: currentColor; }
+
+    /* ── Override inline-style dark backgrounds ── */
+
+    /* The 6 "Why it matters" info cards */
+    body.light [style*="rgba(13,20,36,.7)"] {
+      background: #ffffff !important;
+      border-color: rgba(0,0,0,.09) !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    /* PAGASA table header bar */
+    body.light [style*="rgba(13,20,36,.9)"] {
+      background: #f1f5f9 !important;
+    }
+    /* PAGASA table row tints — keep subtle but light-friendly */
+    body.light [style*="rgba(34,211,160,.05)"]  { background: rgba(34,211,160,.08)  !important; }
+    body.light [style*="rgba(244,196,48,.05)"]  { background: rgba(244,196,48,.08)  !important; }
+    body.light [style*="rgba(251,124,37,.05)"]  { background: rgba(251,124,37,.08)  !important; }
+    body.light [style*="rgba(239,68,68,.05)"]   { background: rgba(239,68,68,.08)   !important; }
+    /* References bar at bottom of educational section */
+    body.light [style*="rgba(56,189,248,.05)"]  { background: rgba(56,189,248,.08)  !important; border-color: rgba(56,189,248,.2) !important; }
+    /* WBGT formula box */
+    body.light [style*="rgba(249,115,22,.06)"]  { background: rgba(249,115,22,.07)  !important; border-color: rgba(249,115,22,.2) !important; }
+    /* Dark chart bg inside detail panel */
+    body.light [style*="rgba(13,20,36,.7)"] svg text { fill: #475569 !important; }
+
+    /* PAGASA table border rows */
+    body.light .border-white\/5 { border-color: rgba(0,0,0,.06) !important; }
+
+    /* Inline icon badge backgrounds — already semi-transparent, keep them */
+    /* Alarm banner — keep dark for visibility in both themes */
+
+    /* Text inside "Why it matters" cards */
+    body.light [style*="rgba(13,20,36,.7)"] .text-slate-400 { color: #475569 !important; }
+    body.light [style*="rgba(13,20,36,.7)"] .text-slate-300 { color: #1e293b !important; }
+    body.light [style*="rgba(13,20,36,.7)"] .text-white     { color: #0f172a !important; }
+    body.light [style*="rgba(13,20,36,.7)"] .syne           { color: #0f172a !important; }
+
+    /* WBGT & HI card inner containers */
+    body.light [style*="rgba(13,20,36,.7)"].rounded-xl > * { color: #334155; }
+
+    /* "glass" outer panel wrapping the 6 cards */
+    body.light .glass.rounded-2xl {
+      background: #ffffff !important;
+      border-color: rgba(0,0,0,.09) !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    /* Main surface/panel header bg */
+    body.light [style*="rgba(6,9,18,.95)"] {
+      background: rgba(241,245,249,.97) !important;
+    }
+    body.light [style*="rgba(5,8,18,.97)"] {
+      background: rgba(255,255,255,.98) !important;
+      border-color: rgba(0,0,0,.1) !important;
+    }
+    /* alarm-banner — keep dark always for visibility */
+    body.light #alarm-banner { background: rgba(10,4,4,.97) !important; }
+
+    /* ── Info cards (6 "Why it matters" cards) ── */
+    body.light .info-card {
+      background: #ffffff !important;
+      border-color: rgba(0,0,0,.08) !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    body.light .info-card p,
+    body.light .info-card span:not([class*="text-"]):not([class*="bg-"]) {
+      color: #475569;
+    }
+    body.light .info-card .syne     { color: #0f172a !important; }
+    body.light .info-card .text-slate-300 { color: #1e293b   !important; }
+    body.light .info-card .text-slate-400 { color: #475569   !important; }
+    body.light .info-card .text-slate-500 { color: #64748b   !important; }
+    body.light .info-card .text-white     { color: #0f172a   !important; }
+
+    /* ── Outer "Why it matters" glass panel ── */
+    body.light .why-panel {
+      background: #ffffff !important;
+      border-color: rgba(0,0,0,.08) !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    body.light .why-panel > .flex > div > h3 { color: #0f172a !important; }
+    body.light .why-panel > .flex > div > p  { color: #64748b !important; }
+
+    /* ── PAGASA Heat Index danger table ── */
+    body.light .pagasa-table { border-color: rgba(0,0,0,.09) !important; }
+    body.light .pagasa-table [style*="rgba(13,20,36,.9)"] {
+      background: #f8fafc !important;
+    }
+    body.light .pagasa-table [style*="rgba(34,211,160,.05)"],
+    body.light .pagasa-table [style*="rgba(244,196,48,.05)"],
+    body.light .pagasa-table [style*="rgba(251,124,37,.05)"],
+    body.light .pagasa-table [style*="rgba(239,68,68,.05)"] {
+      background: #ffffff !important;
+    }
+    body.light .pagasa-table .border-white\/5 { border-color: rgba(0,0,0,.06) !important; }
+    body.light .pagasa-table .text-slate-300  { color: #1e293b !important; }
+    body.light .pagasa-table .text-slate-500  { color: #64748b !important; }
+
+    /* ── WBGT formula box ── */
+    body.light .formula-box {
+      background: rgba(249,115,22,.06) !important;
+      border-color: rgba(249,115,22,.2) !important;
+    }
+    body.light .formula-box .text-slate-400 { color: #64748b !important; }
+
+    /* ── References bar ── */
+    body.light .refs-bar {
+      background: rgba(56,189,248,.07) !important;
+      border-color: rgba(56,189,248,.25) !important;
+    }
+    body.light .refs-bar .text-slate-400 { color: #475569 !important; }
+    body.light .refs-bar .text-sky-300   { color: #0284c7 !important; }
+
+    /* ── Educational gcard panels (WBGT & HI explanation cards) ── */
+    body.light .gcard .text-slate-300 { color: #334155 !important; }
+    body.light .gcard .text-slate-400 { color: #475569 !important; }
+    body.light .gcard .text-slate-500 { color: #64748b !important; }
+
+    /* Theme toggle button */
+    #theme-toggle {
+      width: 2.25rem; height: 2.25rem; border-radius: .5rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .2s ease; flex-shrink: 0;
+    }
+    #theme-toggle svg { transition: transform .35s ease, opacity .2s ease; }
+
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
@@ -195,6 +392,21 @@
           <span id="conn-dot" class="w-2 h-2 rounded-full bg-slate-600 live-dot flex-shrink-0"></span>
           <span id="conn-text" class="text-slate-400 hidden sm:inline">Connecting…</span>
         </div>
+        <button id="theme-toggle" onclick="toggleTheme()"
+                title="Toggle light/dark theme"
+                class="w-9 h-9 rounded-lg glass flex items-center justify-center transition-colors flex-shrink-0">
+          <!-- Sun icon (show in dark mode) -->
+          <svg id="icon-sun" class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+          </svg>
+          <!-- Moon icon (show in light mode, hidden by default) -->
+          <svg id="icon-moon" class="w-4 h-4 text-slate-600 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+
         <button id="alarm-toggle" onclick="toggleAlarm()"
                 title="Heat Alarm (click to arm/disarm)"
                 class="w-9 h-9 rounded-lg glass flex items-center justify-center transition-colors flex-shrink-0">
@@ -227,12 +439,12 @@
         </div>
         <div class="min-w-0">
           <p id="location-name" class="syne text-base font-600 text-white truncate">Monitoring Station</p>
-          <p class="text-xs text-slate-500 truncate">Naic Meteorological Observatory — PPW Timalan Balsahan</p>
+          <p class="text-xs text-slate-500 truncate">Naic Meteorological Observatory | PPW Timalan Balsahan</p>
         </div>
       </div>
       <div class="glass rounded-xl px-4 py-2 text-right flex-shrink-0">
         <p class="text-xs text-slate-500 uppercase tracking-widest mb-0.5">Last Updated</p>
-        <p id="last-update" class="mono text-sm font-500 text-sky-300">–– : –– : ––</p>
+        <p id="last-update" class="mono text-sm font-500 text-sky-300 whitespace-nowrap">–– : –– : ––</p>
       </div>
     </div>
 
@@ -437,7 +649,7 @@
           <p class="text-sm text-slate-300 leading-relaxed mb-4">
             WBGT is the most comprehensive heat stress index used worldwide for <span class="text-white font-500">outdoor occupational and athletic environments</span>. Unlike simple temperature readings, it integrates four key environmental factors the human body must contend with simultaneously.
           </p>
-          <div class="rounded-xl p-4 mb-4" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.12);">
+          <div class="rounded-xl p-4 mb-4 formula-box" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.12);">
             <p class="text-xs text-slate-400 uppercase tracking-widest mb-3 mono">Outdoor WBGT Formula</p>
             <div class="mono text-sm text-center text-orange-300 font-600 mb-3">WBGT = 0.7 T<sub class="text-xs">w</sub> + 0.2 T<sub class="text-xs">g</sub> + 0.1 T<sub class="text-xs">a</sub></div>
             <div class="space-y-2">
@@ -480,7 +692,7 @@
           <p class="text-sm text-slate-300 leading-relaxed mb-4">
             The <span class="text-white font-500">Philippine Atmospheric, Geophysical and Astronomical Services Administration (PAGASA)</span> defines the Heat Index as the <em>"apparent temperature"</em> — what the temperature <em>feels like</em> to the human body when relative humidity is factored in with actual air temperature.
           </p>
-          <div class="rounded-xl overflow-hidden mb-4" style="border:1px solid var(--border)">
+          <div class="rounded-xl overflow-hidden mb-4 pagasa-table" style="border:1px solid var(--border)">
             <div class="px-3 py-2" style="background:rgba(13,20,36,.9)">
               <p class="text-xs text-slate-500 uppercase tracking-widest mono">PAGASA Heat Index Danger Levels</p>
             </div>
@@ -518,7 +730,7 @@
       </div>
 
       <!-- Why it matters -->
-      <div class="glass rounded-2xl p-6">
+      <div class="glass rounded-2xl p-6 why-panel">
         <div class="flex items-start gap-4 mb-5">
           <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                style="background:linear-gradient(135deg,rgba(56,189,248,.15),rgba(6,182,212,.1));border:1px solid rgba(56,189,248,.2);">
@@ -535,7 +747,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+          <div class="rounded-xl p-4 info-card" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(239,68,68,.12);">
                 <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
@@ -545,7 +757,7 @@
             <p class="text-xs text-slate-400 leading-relaxed">The Philippines&rsquo; tropical climate &mdash; with humidity regularly exceeding 80% &mdash; means even moderate temperatures can produce dangerously high apparent temperatures. Heat-related illnesses can occur rapidly, especially in children, the elderly, and outdoor workers without warning systems in place.</p>
           </div>
 
-          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+          <div class="rounded-xl p-4 info-card" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(234,179,8,.12);">
                 <svg class="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -555,7 +767,7 @@
             <p class="text-xs text-slate-400 leading-relaxed">Farmers, fishermen, construction workers, and other outdoor laborers are among the most vulnerable. WBGT directly guides safe work/rest scheduling per <span class="text-slate-300">DOLE Department Order No. 220 Series of 2023</span> &mdash; Heat Stress Management Guidelines in the Workplace.</p>
           </div>
 
-          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+          <div class="rounded-xl p-4 info-card" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(56,189,248,.12);">
                 <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
@@ -565,7 +777,7 @@
             <p class="text-xs text-slate-400 leading-relaxed">PAGASA climate projections show the Philippines experiencing longer and hotter dry seasons. The 2024 dry season recorded Heat Index values surpassing <span class="text-slate-300">48&deg;C</span> in several areas. Real-time monitoring empowers communities to adapt proactively rather than react after illness occurs.</p>
           </div>
 
-          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+          <div class="rounded-xl p-4 info-card" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(168,85,247,.12);">
                 <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 7l9-5-9-5-9 5 9 5z"/></svg>
@@ -575,7 +787,7 @@
             <p class="text-xs text-slate-400 leading-relaxed">Students attending flag ceremonies, PE classes, and outdoor school activities are regularly exposed to peak afternoon heat. WBGT and Heat Index readings give school administrators the evidence needed to reschedule or suspend outdoor activities before dangerous conditions are reached.</p>
           </div>
 
-          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+          <div class="rounded-xl p-4 info-card" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(20,184,166,.12);">
                 <svg class="w-3.5 h-3.5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
@@ -585,7 +797,7 @@
             <p class="text-xs text-slate-400 leading-relaxed">LGUs and barangay health workers can use real-time data for early warning &mdash; opening cooling centers, coordinating with BHERTs (Barangay Health Emergency Response Teams), and issuing community alerts aligned with PAGASA advisories before dangerous thresholds are reached.</p>
           </div>
 
-          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+          <div class="rounded-xl p-4 info-card" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(249,115,22,.12);">
                 <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -597,7 +809,7 @@
 
         </div>
 
-        <div class="mt-5 rounded-xl px-4 py-3 flex items-start gap-3" style="background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.12);">
+        <div class="mt-5 rounded-xl px-4 py-3 flex items-start gap-3 refs-bar" style="background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.12);">
           <svg class="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -610,7 +822,7 @@
     </section>
 
     <footer class="text-center text-xs text-slate-600 pb-8 fade-up" style="animation-delay:.56s">
-      Auto-refreshes at 0, 5, 10, 15… minute marks · WBGT via simplified outdoor formula (Stull 2011)
+      Data automatically updates every 5 minutes. For official Heat Index advisories, please refer to DOST-PAGASA.
     </footer>
   </main>
 </div>
@@ -897,7 +1109,11 @@ function processWeather(apiData) {
     const uvEl = document.getElementById('uv-level');
     uvEl.textContent = uv.label; uvEl.style.color = uv.color;
     $('dewpoint-value').textContent = `${dC.toFixed(1)}°C`;
-    $('last-update').textContent = new Date().toLocaleTimeString();
+    const _now = new Date();
+    const _timeStr = _now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const _dateStr = _now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const _dayStr  = _now.toLocaleDateString('en-US', { weekday: 'long' });
+    $('last-update').textContent = `${_timeStr}, ${_dateStr} (${_dayStr})`;
 
     // Check alarm thresholds
     checkAlarm(wbgt, hi);
@@ -1302,6 +1518,39 @@ function showToast(msg, color = '#38bdf8') {
     toast.style.transform = 'translateX(-50%) translateY(8px)';
   }, 2800);
 }
+
+
+/* ─── Theme toggle ─── */
+let isDark = true; // default dark
+
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('light', !isDark);
+
+  // Swap icons
+  const sun  = $('icon-sun');
+  const moon = $('icon-moon');
+  if (isDark) {
+    sun.classList.remove('hidden');
+    moon.classList.add('hidden');
+    $('theme-toggle').title = 'Switch to light theme';
+  } else {
+    sun.classList.add('hidden');
+    moon.classList.remove('hidden');
+    $('theme-toggle').title = 'Switch to dark theme';
+  }
+
+  // Persist preference
+  try { localStorage.setItem('heatPortalTheme', isDark ? 'dark' : 'light'); } catch(e) {}
+}
+
+// Load saved theme preference
+(function initTheme() {
+  try {
+    const saved = localStorage.getItem('heatPortalTheme');
+    if (saved === 'light') toggleTheme();
+  } catch(e) {}
+})();
 
 /* ─── SDK ─── */
 function applyConfig(cfg) {
