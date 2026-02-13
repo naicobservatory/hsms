@@ -1,0 +1,1369 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heat Stress Monitoring System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    html, body { height: 100%; box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --bg:      #060912;
+      --surface: #0d1424;
+      --panel:   #111827;
+      --border:  rgba(255,255,255,0.07);
+      --text:    #e2e8f0;
+      --muted:   #64748b;
+      --accent:  #38bdf8;
+    }
+
+    body  { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .syne { font-family: 'Syne', sans-serif; }
+
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image: linear-gradient(rgba(56,189,248,.03) 1px,transparent 1px), linear-gradient(90deg,rgba(56,189,248,.03) 1px,transparent 1px);
+      background-size: 40px 40px;
+    }
+    body::after {
+      content: ''; position: fixed; top: -20%; left: 50%; transform: translateX(-50%);
+      width: 80vw; height: 60vh; z-index: 0; pointer-events: none;
+      background: radial-gradient(ellipse,rgba(56,189,248,.06) 0%,transparent 70%);
+    }
+
+    #app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+    .glass { background: rgba(13,20,36,.85); border: 1px solid var(--border); backdrop-filter: blur(14px); }
+
+    .gcard { position: relative; background: var(--panel); border-radius: 1.25rem; overflow: hidden; }
+    .gcard::before {
+      content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+      background: linear-gradient(135deg,rgba(56,189,248,.35) 0%,rgba(16,185,129,.25) 50%,rgba(99,102,241,.2) 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+    }
+
+    .risk-low  { background: linear-gradient(135deg,#064e3b,#065f46); }
+    .risk-mod  { background: linear-gradient(135deg,#713f12,#854d0e); }
+    .risk-high { background: linear-gradient(135deg,#7c2d12,#9a3412); }
+    .risk-ext  { background: linear-gradient(135deg,#7f1d1d,#991b1b); }
+
+    .gauge-track { stroke: rgba(255,255,255,.06); }
+    .gauge-arc { stroke-linecap: round; transition: stroke-dashoffset .9s cubic-bezier(.4,0,.2,1), stroke .4s ease; }
+
+    .risk-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      font-size: .75rem; font-weight: 600; letter-spacing: .03em;
+      border: 1.5px solid currentColor;
+    }
+    .risk-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    /* clickable stat card */
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 1rem; padding: 1.25rem;
+      cursor: pointer; transition: all .25s ease; user-select: none; position: relative;
+    }
+    .stat-card:hover { border-color: rgba(56,189,248,.4); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(56,189,248,.08); }
+    .stat-card:active { transform: translateY(-1px); }
+    .stat-card .hint { opacity: 0; font-size: .6rem; color: var(--accent); letter-spacing: .02em; transition: opacity .2s; margin-top: 5px; }
+    .stat-card:hover .hint { opacity: 1; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .live-dot { animation: blink 2.2s ease-in-out infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .spinning { animation: spin .8s linear infinite; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp .55s ease-out both; }
+
+
+    /* ═══ ALARM STYLES ═══ */
+    @keyframes alarmPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.5); }
+      50%      { box-shadow: 0 0 0 16px rgba(239,68,68,0); }
+    }
+    @keyframes alarmSlideDown {
+      from { transform: translateX(-50%) translateY(-120%); opacity: 0; }
+      to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+    }
+    @keyframes alarmSlideUp {
+      from { transform: translateX(-50%) translateY(0);     opacity: 1; }
+      to   { transform: translateX(-50%) translateY(-120%); opacity: 0; }
+    }
+    #alarm-banner {
+      position: fixed; top: 68px; left: 50%;
+      transform: translateX(-50%) translateY(calc(-100% - 80px));
+      opacity: 0; pointer-events: none;
+      z-index: 500; min-width: 320px; max-width: 90vw;
+      background: rgba(10,4,4,.97); border: 1px solid rgba(239,68,68,.5);
+      border-radius: 1rem; padding: 14px 16px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 0 32px rgba(239,68,68,.25), 0 8px 32px rgba(0,0,0,.6);
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+    }
+    #alarm-banner.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #alarm-banner .pulse-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #ef4444; flex-shrink: 0;
+      animation: alarmPulse 1.2s ease-in-out infinite;
+    }
+    #alarm-toggle.armed { border-color: rgba(239,68,68,.5) !important; background: rgba(239,68,68,.1) !important; }
+    #alarm-toggle.armed svg { color: #ef4444; }
+    #alarm-toggle.alarming { animation: alarmPulse .8s ease-in-out infinite; border-color: rgba(239,68,68,.8) !important; background: rgba(239,68,68,.2) !important; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+
+    main { flex: 1; overflow-y: auto; }
+
+    /* ═══ DETAIL PANEL ═══ */
+    #detail-panel {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--bg);
+      transform: translateX(100%);
+      transition: transform .38s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    #detail-panel.open { transform: translateX(0); }
+    #detail-panel::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background-image: linear-gradient(rgba(56,189,248,.025) 1px,transparent 1px), linear-gradient(90deg,rgba(56,189,248,.025) 1px,transparent 1px);
+      background-size: 40px 40px;
+    }
+    #detail-body { flex: 1; overflow-y: auto; position: relative; z-index: 1; }
+
+    /* chart */
+    .chart-wrap { position: relative; width: 100%; background: rgba(13,20,36,.7); border: 1px solid var(--border); border-radius: 1rem; overflow: hidden; }
+    .chart-wrap svg { width: 100%; height: 100%; display: block; }
+
+    #chart-tooltip {
+      position: absolute; top: 0; left: 0;
+      background: rgba(5,8,18,.97); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px; padding: 8px 12px; pointer-events: none;
+      opacity: 0; transition: opacity .12s; white-space: nowrap; z-index: 20;
+    }
+    #chart-tooltip.show { opacity: 1; }
+
+    #chart-overlay { position: absolute; inset: 0; cursor: crosshair; }
+
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .shimmer {
+      background: linear-gradient(90deg,#1e293b 25%,#293548 50%,#1e293b 75%);
+      background-size: 200% 100%; animation: shimmer 1.6s infinite; border-radius: 6px;
+    }
+
+    .stat-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; }
+    .strip-item { background: rgba(13,20,36,.7); border: 1px solid var(--border); border-radius: .75rem; padding: .875rem 1rem; text-align: center; }
+  </style>
+</head>
+<body class="h-full">
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-20 border-b border-white/5" style="background:rgba(6,9,18,.95);backdrop-filter:blur(18px);">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#f97316,#ef4444);box-shadow:0 0 18px rgba(249,115,22,.35);">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4" stroke-width="2"/>
+            <path stroke-linecap="round" stroke-width="2" d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M17.66 6.34l-1.41 1.41M6.34 17.66l-1.41 1.41"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h1 id="portal-title" class="syne text-base sm:text-lg font-700 text-white leading-tight truncate">Heat Stress Monitoring</h1>
+          <p id="organization-name" class="text-xs text-slate-500 mt-px truncate">Environmental Health &amp; Safety</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs whitespace-nowrap">
+          <span id="conn-dot" class="w-2 h-2 rounded-full bg-slate-600 live-dot flex-shrink-0"></span>
+          <span id="conn-text" class="text-slate-400 hidden sm:inline">Connecting…</span>
+        </div>
+        <button id="alarm-toggle" onclick="toggleAlarm()"
+                title="Heat Alarm (click to arm/disarm)"
+                class="w-9 h-9 rounded-lg glass flex items-center justify-center transition-colors flex-shrink-0">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+        </button>
+
+        <button onclick="refreshData()" title="Refresh" class="w-9 h-9 rounded-lg glass flex items-center justify-center hover:border-sky-500/40 transition-colors flex-shrink-0">
+          <svg id="refresh-icon" class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 w-full">
+
+    <!-- Location bar -->
+    <div class="fade-up flex flex-wrap items-center justify-between gap-3" style="animation-delay:.05s">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.2);">
+          <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <p id="location-name" class="syne text-base font-600 text-white truncate">Monitoring Station</p>
+          <p class="text-xs text-slate-500 truncate">Naic Meteorological Observatory — PPW Timalan Balsahan</p>
+        </div>
+      </div>
+      <div class="glass rounded-xl px-4 py-2 text-right flex-shrink-0">
+        <p class="text-xs text-slate-500 uppercase tracking-widest mb-0.5">Last Updated</p>
+        <p id="last-update" class="mono text-sm font-500 text-sky-300">–– : –– : ––</p>
+      </div>
+    </div>
+
+    <!-- Primary gauges -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="gcard p-6 fade-up" style="animation-delay:.12s">
+        <div class="flex items-start justify-between mb-5">
+          <div class="min-w-0">
+            <p class="syne text-base font-600 text-white">Wet Bulb Globe Temperature</p>
+            <p class="text-xs text-slate-500 mt-1 mono uppercase tracking-widest">WBGT Index</p>
+          </div>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.2);">
+            <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="flex items-center gap-6">
+          <div class="relative w-32 h-32 flex-shrink-0">
+            <svg class="w-full h-full" viewBox="0 0 100 100">
+              <circle class="gauge-track" cx="50" cy="50" r="40" fill="none" stroke-width="7"/>
+              <circle id="wbgt-gauge" cx="50" cy="50" r="40" fill="none" stroke-width="7" class="gauge-arc" stroke="#22d3a0" stroke-dasharray="251.33" stroke-dashoffset="251.33" transform="rotate(-90 50 50)"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span id="wbgt-value" class="mono text-3xl font-700 text-white leading-none">––</span>
+              <span class="text-xs text-slate-500 mt-0.5">°C</span>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div id="wbgt-badge" class="risk-badge mb-3" style="color:#22d3a0"><span class="dot"></span><span id="wbgt-risk-text">Loading…</span></div>
+            <p id="wbgt-recommendation" class="text-sm text-slate-400 leading-relaxed">Fetching current conditions…</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="gcard p-6 fade-up" style="animation-delay:.2s">
+        <div class="flex items-start justify-between mb-5">
+          <div class="min-w-0">
+            <p class="syne text-base font-600 text-white">Heat Index</p>
+            <p class="text-xs text-slate-500 mt-1 mono uppercase tracking-widest">Apparent Temperature</p>
+          </div>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2);">
+            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="flex items-center gap-6">
+          <div class="relative w-32 h-32 flex-shrink-0">
+            <svg class="w-full h-full" viewBox="0 0 100 100">
+              <circle class="gauge-track" cx="50" cy="50" r="40" fill="none" stroke-width="7"/>
+              <circle id="hi-gauge" cx="50" cy="50" r="40" fill="none" stroke-width="7" class="gauge-arc" stroke="#22d3a0" stroke-dasharray="251.33" stroke-dashoffset="251.33" transform="rotate(-90 50 50)"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span id="hi-value" class="mono text-3xl font-700 text-white leading-none">––</span>
+              <span class="text-xs text-slate-500 mt-0.5">°C</span>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div id="hi-badge" class="risk-badge mb-3" style="color:#22d3a0"><span class="dot"></span><span id="hi-risk-text">Loading…</span></div>
+            <p id="hi-recommendation" class="text-sm text-slate-400 leading-relaxed">Fetching current conditions…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Conditions (clickable) -->
+    <section class="fade-up" style="animation-delay:.28s">
+      <h2 class="syne text-sm font-600 uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+        <svg class="w-4 h-4 text-sky-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        Current Conditions
+        <span class="hidden sm:inline text-xs text-slate-600 normal-case tracking-normal font-400 ml-1">— click any card to view 24h history</span>
+      </h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+
+        <div class="stat-card" onclick="openDetail('temperature')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-slate-500">Temperature</span>
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:rgba(239,68,68,.12);">
+              <svg class="w-3.5 h-3.5 text-red-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C10.35 2 9 3.35 9 5v7.59c-1.19.83-2 2.18-2 3.72C7 19.05 9.24 21.25 12 21.25s5-2.2 5-4.94c0-1.54-.81-2.89-2-3.72V5c0-1.65-1.35-3-3-3zm0 2c.55 0 1 .45 1 1v8.41l.53.35c.76.51 1.22 1.35 1.22 2.24 0 1.56-1.31 2.94-2.75 2.94S9.25 17.56 9.25 16c0-.89.46-1.73 1.22-2.24l.53-.35V5c0-.55.45-1 1-1z"/></svg>
+            </div>
+          </div>
+          <p id="temp-value" class="mono text-xl font-700 text-white">––°C</p>
+          <p class="text-xs text-slate-600 mt-1">Outdoor dry bulb</p>
+          <p class="hint">↗ 24h history</p>
+        </div>
+
+        <div class="stat-card" onclick="openDetail('humidity')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-slate-500">Humidity</span>
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:rgba(59,130,246,.12);">
+              <svg class="w-3.5 h-3.5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8zm0 18c-3.35 0-6-2.57-6-6.2 0-2.34 1.95-5.44 6-9.14 4.05 3.7 6 6.79 6 9.14 0 3.63-2.65 6.2-6 6.2z"/></svg>
+            </div>
+          </div>
+          <p id="humidity-value" class="mono text-xl font-700 text-white">––%</p>
+          <p class="text-xs text-slate-600 mt-1">Relative humidity</p>
+          <p class="hint">↗ 24h history</p>
+        </div>
+
+        <div class="stat-card" onclick="openDetail('solar')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-slate-500">Solar Rad.</span>
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:rgba(234,179,8,.12);">
+              <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 7a5 5 0 100 10A5 5 0 0012 7zm0-2a1 1 0 001-1V2a1 1 0 00-2 0v2a1 1 0 001 1zm0 14a1 1 0 00-1 1v2a1 1 0 002 0v-2a1 1 0 00-1-1zm-7-7H2a1 1 0 000 2h3a1 1 0 000-2zm17 0h-3a1 1 0 000 2h3a1 1 0 000-2z"/></svg>
+            </div>
+          </div>
+          <p id="solar-value" class="mono text-xl font-700 text-white">–– <span class="text-sm font-400">W/m²</span></p>
+          <p class="text-xs text-slate-600 mt-1">Irradiance</p>
+          <p class="hint">↗ 24h history</p>
+        </div>
+
+        <div class="stat-card" onclick="openDetail('wind')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-slate-500">Wind Speed</span>
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:rgba(20,184,166,.12);">
+              <svg class="w-3.5 h-3.5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h4a2 2 0 012 2v0a2 2 0 01-2 2h-4M5 9h10M6 13h8a2 2 0 012 2v0a2 2 0 01-2 2H6"/></svg>
+            </div>
+          </div>
+          <p id="wind-value" class="mono text-xl font-700 text-white">–– <span class="text-sm font-400">km/h</span></p>
+          <p id="wind-direction" class="text-xs text-slate-600 mt-1">––</p>
+          <p class="hint">↗ 24h history</p>
+        </div>
+
+        <div class="stat-card" onclick="openDetail('uvi')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-slate-500">UV Index</span>
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:rgba(168,85,247,.12);">
+              <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/></svg>
+            </div>
+          </div>
+          <p id="uv-value" class="mono text-xl font-700 text-white">––</p>
+          <p id="uv-level" class="text-xs text-slate-600 mt-1">––</p>
+          <p class="hint">↗ 24h history</p>
+        </div>
+
+        <div class="stat-card" onclick="openDetail('dewpoint')">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-slate-500">Dew Point</span>
+            <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:rgba(6,182,212,.12);">
+              <svg class="w-3.5 h-3.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/></svg>
+            </div>
+          </div>
+          <p id="dewpoint-value" class="mono text-xl font-700 text-white">––°C</p>
+          <p class="text-xs text-slate-600 mt-1">Condensation pt.</p>
+          <p class="hint">↗ 24h history</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Risk Level Guide -->
+    <section class="glass rounded-2xl p-6 fade-up" style="animation-delay:.36s">
+      <h2 class="syne text-sm font-600 uppercase tracking-widest text-slate-400 mb-5 flex items-center gap-2">
+        <svg class="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        Heat Risk Level Guide
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="risk-low rounded-xl p-4"><div class="flex items-center gap-2 mb-2"><span class="w-2.5 h-2.5 rounded-full bg-white/80"></span><span class="syne font-600 text-white text-sm">Low Risk</span></div><p class="text-xs text-white/75 mono">WBGT &lt; 25°C</p><p class="text-xs text-white/75 mono">HI &lt; 27°C</p><hr class="my-2 border-white/10"><p class="text-xs text-white/50">Normal activities permitted</p></div>
+        <div class="risk-mod rounded-xl p-4"><div class="flex items-center gap-2 mb-2"><span class="w-2.5 h-2.5 rounded-full bg-white/80"></span><span class="syne font-600 text-white text-sm">Moderate Risk</span></div><p class="text-xs text-white/75 mono">WBGT 25–28°C</p><p class="text-xs text-white/75 mono">HI 27–32°C</p><hr class="my-2 border-white/10"><p class="text-xs text-white/50">Increase water &amp; shade breaks</p></div>
+        <div class="risk-high rounded-xl p-4"><div class="flex items-center gap-2 mb-2"><span class="w-2.5 h-2.5 rounded-full bg-white/80"></span><span class="syne font-600 text-white text-sm">High Risk</span></div><p class="text-xs text-white/75 mono">WBGT 28–33°C</p><p class="text-xs text-white/75 mono">HI 32–41°C</p><hr class="my-2 border-white/10"><p class="text-xs text-white/50">Limit strenuous activity</p></div>
+        <div class="risk-ext rounded-xl p-4"><div class="flex items-center gap-2 mb-2"><span class="w-2.5 h-2.5 rounded-full bg-white/80"></span><span class="syne font-600 text-white text-sm">Extreme Risk</span></div><p class="text-xs text-white/75 mono">WBGT &gt; 33°C</p><p class="text-xs text-white/75 mono">HI ≥ 54°C</p><hr class="my-2 border-white/10"><p class="text-xs text-white/50">Stop all outdoor activities</p></div>
+      </div>
+    </section>
+
+
+    <!-- EDUCATIONAL SECTION -->
+    <section class="fade-up space-y-5" style="animation-delay:.48s">
+
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+             style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.2);">
+          <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+          </svg>
+        </div>
+        <h2 class="syne text-sm font-600 uppercase tracking-widest text-slate-400">Understanding Heat Stress Indicators</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        <!-- WBGT -->
+        <div class="gcard p-6">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                 style="background:linear-gradient(135deg,rgba(249,115,22,.2),rgba(239,68,68,.1));border:1px solid rgba(249,115,22,.25);">
+              <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="syne text-base font-700 text-white leading-tight">Wet Bulb Globe Temperature</h3>
+              <p class="mono text-xs text-orange-400 mt-0.5 uppercase tracking-widest">WBGT</p>
+            </div>
+          </div>
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            WBGT is the most comprehensive heat stress index used worldwide for <span class="text-white font-500">outdoor occupational and athletic environments</span>. Unlike simple temperature readings, it integrates four key environmental factors the human body must contend with simultaneously.
+          </p>
+          <div class="rounded-xl p-4 mb-4" style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.12);">
+            <p class="text-xs text-slate-400 uppercase tracking-widest mb-3 mono">Outdoor WBGT Formula</p>
+            <div class="mono text-sm text-center text-orange-300 font-600 mb-3">WBGT = 0.7 T<sub class="text-xs">w</sub> + 0.2 T<sub class="text-xs">g</sub> + 0.1 T<sub class="text-xs">a</sub></div>
+            <div class="space-y-2">
+              <div class="flex items-start gap-2 text-xs">
+                <span class="mono text-orange-400 font-600 w-6 flex-shrink-0">Tw</span>
+                <span class="text-slate-400"><span class="text-slate-300">Natural Wet Bulb (70%)</span> — the dominant factor. High humidity severely limits the body's ability to sweat and cool down.</span>
+              </div>
+              <div class="flex items-start gap-2 text-xs">
+                <span class="mono text-orange-400 font-600 w-6 flex-shrink-0">Tg</span>
+                <span class="text-slate-400"><span class="text-slate-300">Globe Temperature (20%)</span> — captures radiant heat from the sun. Critical in open, sun-exposed work areas.</span>
+              </div>
+              <div class="flex items-start gap-2 text-xs">
+                <span class="mono text-orange-400 font-600 w-6 flex-shrink-0">Ta</span>
+                <span class="text-slate-400"><span class="text-slate-300">Air Temperature (10%)</span> — the dry bulb temperature most people are familiar with.</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            WBGT is the standard adopted by the <span class="text-slate-300">International Organization for Standardization (ISO 7243)</span>, military forces, and sports governing bodies worldwide for setting safe work/rest cycles and activity limits outdoors.
+          </p>
+        </div>
+
+        <!-- Heat Index -->
+        <div class="gcard p-6">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                 style="background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(220,38,38,.1));border:1px solid rgba(239,68,68,.25);">
+              <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="syne text-base font-700 text-white leading-tight">Heat Index</h3>
+              <p class="mono text-xs text-red-400 mt-0.5 uppercase tracking-widest">Apparent Temperature &middot; PAGASA Standard</p>
+            </div>
+          </div>
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            The <span class="text-white font-500">Philippine Atmospheric, Geophysical and Astronomical Services Administration (PAGASA)</span> defines the Heat Index as the <em>"apparent temperature"</em> — what the temperature <em>feels like</em> to the human body when relative humidity is factored in with actual air temperature.
+          </p>
+          <div class="rounded-xl overflow-hidden mb-4" style="border:1px solid var(--border)">
+            <div class="px-3 py-2" style="background:rgba(13,20,36,.9)">
+              <p class="text-xs text-slate-500 uppercase tracking-widest mono">PAGASA Heat Index Danger Levels</p>
+            </div>
+            <div>
+              <div class="flex items-center gap-3 px-3 py-2.5 text-xs border-b border-white/5" style="background:rgba(34,211,160,.05)">
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#22d3a0"></span>
+                <span class="mono font-600 text-emerald-400 w-24 flex-shrink-0">27 &ndash; 32&deg;C</span>
+                <span class="text-slate-300 font-500">Caution</span>
+                <span class="text-slate-500 ml-auto hidden sm:inline">Fatigue possible with prolonged exposure</span>
+              </div>
+              <div class="flex items-center gap-3 px-3 py-2.5 text-xs border-b border-white/5" style="background:rgba(244,196,48,.05)">
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#f4c430"></span>
+                <span class="mono font-600 text-yellow-400 w-24 flex-shrink-0">33 &ndash; 41&deg;C</span>
+                <span class="text-slate-300 font-500">Extreme Caution</span>
+                <span class="text-slate-500 ml-auto hidden sm:inline">Heat cramps &amp; exhaustion possible</span>
+              </div>
+              <div class="flex items-center gap-3 px-3 py-2.5 text-xs border-b border-white/5" style="background:rgba(251,124,37,.05)">
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#fb7c25"></span>
+                <span class="mono font-600 text-orange-400 w-24 flex-shrink-0">42 &ndash; 51&deg;C</span>
+                <span class="text-slate-300 font-500">Danger</span>
+                <span class="text-slate-500 ml-auto hidden sm:inline">Heat stroke likely with activity</span>
+              </div>
+              <div class="flex items-center gap-3 px-3 py-2.5 text-xs" style="background:rgba(239,68,68,.05)">
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:#ef4444"></span>
+                <span class="mono font-600 text-red-400 w-24 flex-shrink-0">&ge; 52&deg;C</span>
+                <span class="text-slate-300 font-500">Extreme Danger</span>
+                <span class="text-slate-500 ml-auto hidden sm:inline">Heat stroke highly likely</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            PAGASA issues public heat advisories when values are forecast to reach <span class="text-slate-300">42&deg;C or higher</span> &mdash; a threshold frequently exceeded during the peak summer months of <span class="text-slate-300">March through May</span> in low-lying and urban areas of the Philippines.
+          </p>
+        </div>
+      </div>
+
+      <!-- Why it matters -->
+      <div class="glass rounded-2xl p-6">
+        <div class="flex items-start gap-4 mb-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+               style="background:linear-gradient(135deg,rgba(56,189,248,.15),rgba(6,182,212,.1));border:1px solid rgba(56,189,248,.2);">
+            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="syne text-base font-700 text-white">Why These Indicators Matter for Philippine Communities</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Especially during the Dry Season (March &ndash; May)</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(239,68,68,.12);">
+                <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+              </div>
+              <p class="syne text-sm font-600 text-white">Public Health Risk</p>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">The Philippines&rsquo; tropical climate &mdash; with humidity regularly exceeding 80% &mdash; means even moderate temperatures can produce dangerously high apparent temperatures. Heat-related illnesses can occur rapidly, especially in children, the elderly, and outdoor workers without warning systems in place.</p>
+          </div>
+
+          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(234,179,8,.12);">
+                <svg class="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </div>
+              <p class="syne text-sm font-600 text-white">Outdoor Workers</p>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">Farmers, fishermen, construction workers, and other outdoor laborers are among the most vulnerable. WBGT directly guides safe work/rest scheduling per <span class="text-slate-300">DOLE Department Order No. 220 Series of 2023</span> &mdash; Heat Stress Management Guidelines in the Workplace.</p>
+          </div>
+
+          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(56,189,248,.12);">
+                <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+              </div>
+              <p class="syne text-sm font-600 text-white">Climate Change Amplifier</p>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">PAGASA climate projections show the Philippines experiencing longer and hotter dry seasons. The 2024 dry season recorded Heat Index values surpassing <span class="text-slate-300">48&deg;C</span> in several areas. Real-time monitoring empowers communities to adapt proactively rather than react after illness occurs.</p>
+          </div>
+
+          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(168,85,247,.12);">
+                <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 7l9-5-9-5-9 5 9 5z"/></svg>
+              </div>
+              <p class="syne text-sm font-600 text-white">Schools &amp; Youth Activities</p>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">Students attending flag ceremonies, PE classes, and outdoor school activities are regularly exposed to peak afternoon heat. WBGT and Heat Index readings give school administrators the evidence needed to reschedule or suspend outdoor activities before dangerous conditions are reached.</p>
+          </div>
+
+          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(20,184,166,.12);">
+                <svg class="w-3.5 h-3.5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+              </div>
+              <p class="syne text-sm font-600 text-white">Disaster Risk Reduction</p>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">LGUs and barangay health workers can use real-time data for early warning &mdash; opening cooling centers, coordinating with BHERTs (Barangay Health Emergency Response Teams), and issuing community alerts aligned with PAGASA advisories before dangerous thresholds are reached.</p>
+          </div>
+
+          <div class="rounded-xl p-4" style="background:rgba(13,20,36,.7);border:1px solid var(--border)">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(249,115,22,.12);">
+                <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              </div>
+              <p class="syne text-sm font-600 text-white">Why Two Indicators?</p>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed"><span class="text-slate-300">Heat Index</span> is ideal for general public communication &mdash; simple and intuitive. <span class="text-slate-300">WBGT</span> is superior for managing physical workloads outdoors as it also captures solar radiation and wind. Together: HI tells you how hot it <em>feels</em>, WBGT tells you how much work is <em>safe</em> to do.</p>
+          </div>
+
+        </div>
+
+        <div class="mt-5 rounded-xl px-4 py-3 flex items-start gap-3" style="background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.12);">
+          <svg class="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            <span class="text-sky-300 font-500">References:</span> PAGASA Heat Index danger levels and dry season advisories (pagasa.dost.gov.ph) &middot; ISO 7243:2017 &mdash; Ergonomics of the thermal environment &middot; Stull, R. (2011): Wet-Bulb Temperature from Relative Humidity and Air Temperature, <em>J. Appl. Meteor. Climatol.</em> &middot; DOLE D.O. No. 220 s. 2023 &mdash; Guidelines on Heat Stress Management in the Workplace.
+          </p>
+        </div>
+      </div>
+
+    </section>
+
+    <footer class="text-center text-xs text-slate-600 pb-8 fade-up" style="animation-delay:.56s">
+      Auto-refreshes at 0, 5, 10, 15… minute marks · WBGT via simplified outdoor formula (Stull 2011)
+    </footer>
+  </main>
+</div>
+
+<!-- ═════════════════════════════════════════
+     DETAIL PANEL
+═════════════════════════════════════════ -->
+<div id="detail-panel">
+
+  <!-- Panel header -->
+  <header class="border-b border-white/5 flex-shrink-0 relative z-10" style="background:rgba(6,9,18,.95);backdrop-filter:blur(18px);">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
+      <button onclick="closeDetail()" class="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex-shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        <span class="text-sm hidden sm:inline">Back</span>
+      </button>
+      <div class="w-px h-5 bg-white/10 flex-shrink-0"></div>
+      <div id="detail-icon" class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"></div>
+      <div class="min-w-0 flex-1">
+        <p id="detail-title" class="syne text-sm sm:text-base font-600 text-white truncate">—</p>
+        <p class="text-xs text-slate-500">Last 24 hours · 5-min intervals</p>
+      </div>
+      <div class="glass rounded-xl px-3 py-2 text-right flex-shrink-0">
+        <p class="text-xs text-slate-500 uppercase tracking-widest mb-0.5">Now</p>
+        <p id="detail-current-val" class="mono text-sm font-700 text-white">––</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Panel body -->
+  <div id="detail-body" class="px-4 sm:px-6 py-6 max-w-4xl mx-auto w-full space-y-5">
+
+    <!-- Loading -->
+    <div id="detail-loading" class="space-y-4">
+      <div class="stat-strip">
+        <div class="shimmer strip-item h-20"></div>
+        <div class="shimmer strip-item h-20"></div>
+        <div class="shimmer strip-item h-20"></div>
+        <div class="shimmer strip-item h-20"></div>
+      </div>
+      <div class="shimmer rounded-xl" style="height:240px"></div>
+    </div>
+
+    <!-- Error -->
+    <div id="detail-error" class="hidden text-center py-16">
+      <div class="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);">
+        <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <p class="text-slate-300 font-medium">Failed to load history</p>
+      <p id="detail-error-msg" class="text-sm text-slate-500 mt-1"></p>
+      <button onclick="retryDetail()" class="mt-4 px-4 py-2 rounded-lg glass text-sm text-sky-400 hover:bg-sky-500/10 transition-colors">Try again</button>
+    </div>
+
+    <!-- Content -->
+    <div id="detail-content" class="hidden space-y-5">
+
+      <!-- Stats strip -->
+      <div class="stat-strip">
+        <div class="strip-item">
+          <p class="text-xs text-slate-500 mb-1.5 uppercase tracking-wider">Min</p>
+          <p id="stat-min" class="mono text-lg font-700 text-white">––</p>
+        </div>
+        <div class="strip-item">
+          <p class="text-xs text-slate-500 mb-1.5 uppercase tracking-wider">Max</p>
+          <p id="stat-max" class="mono text-lg font-700 text-white">––</p>
+        </div>
+        <div class="strip-item">
+          <p class="text-xs text-slate-500 mb-1.5 uppercase tracking-wider">Average</p>
+          <p id="stat-avg" class="mono text-lg font-700 text-white">––</p>
+        </div>
+        <div class="strip-item">
+          <p class="text-xs text-slate-500 mb-1.5 uppercase tracking-wider">Readings</p>
+          <p id="stat-count" class="mono text-lg font-700 text-white">––</p>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="chart-wrap" id="chart-container" style="height:240px;">
+        <svg id="chart-svg" viewBox="0 0 900 240" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop id="gradTop" offset="0%" stop-color="#22d3a0" stop-opacity="0.28"/>
+              <stop id="gradBot" offset="100%" stop-color="#22d3a0" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <g id="g-grid"></g>
+          <g id="g-ylabels"></g>
+          <g id="g-xlabels"></g>
+          <path id="chart-area" fill="url(#areaGrad)" stroke="none" opacity="0.9"/>
+          <path id="chart-line" fill="none" stroke="#22d3a0" stroke-width="1.8"/>
+          <!-- Crosshair -->
+          <line id="svg-ch" x1="0" y1="18" x2="0" y2="200" stroke="rgba(255,255,255,.18)" stroke-width="1" stroke-dasharray="3,3" opacity="0"/>
+          <circle id="svg-dot" cx="-100" cy="-100" r="4.5" fill="#22d3a0" stroke="#060912" stroke-width="2" opacity="0"/>
+        </svg>
+        <div id="chart-overlay" onmousemove="onChartMove(event)" onmouseleave="onChartLeave()" ontouchmove="onChartTouch(event)" ontouchend="onChartLeave()"></div>
+        <div id="chart-tooltip">
+          <p id="tt-time" class="mono text-xs text-slate-400 mb-0.5"></p>
+          <p id="tt-val" class="mono text-sm font-700"></p>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-600 text-right">Hover or touch the chart to inspect a reading</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════
+     JAVASCRIPT
+═════════════════════════════════════════ -->
+<script>
+/* ─── API endpoints ─── */
+const API_URL     = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLjfqsl7Gw99zU6yqCgUdk5-y2H_LZOwVq6tHhigjc5FQD4I-WNWzexYArTmy-mGCHdAt2qTdouDkFg_qVgxSEph1SG2g-x8XXauLsthy6AIbTbxHkrHGDVwi7jPoHkHrS6SIX5KnSvlPdtWrO91Om2NxWKYqynahpdzsvHOy6dGmK5ELxtnh2WJRyKnp3kSbR9RfeaKzEhVSpeCP8_h29rl9T5fECHNTmfhv3NIzimsAeI3XWCo_GM7hZzLL_Kl_zMq5Mv9aw7hf8CP_DmJ13r4mQCnPIrid6Pjv3gM&lib=MTbhs9Zv5KTG9ImKpSDDDPCIObk80Qa1W';
+const HISTORY_URL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLit4rOGc_9hvEeAMwV4AmTiQ4BNcjtzKSmq-tE_d49I2YcJQ2hGne3oaGpmXglNg69UqC0_F6p2M3ZbbEYGe1b0dZ4KVrdUSOuEIiHFNd9i7R9Ru1pbETj3xfEPkvLkJXn0Mmc7exaJKBMc4lnFeefchQk7J_gw0EGn7RSqQmyJXUqMdLDjkTGQDX8xzkzrBXBy9VII9vSVuTWFTGG_SNNFQJQLaEvj675CfZIgmDZ7O86bUE4HrvIhjer9JXfkgER-2GWaOwg261s1IRcq6DlDTMECpw&lib=MInCaCyrkr9R8O7NXafX6HoCtwaES1gvt';
+
+/* ─── Variable definitions ─── */
+const VAR = {
+  temperature: {
+    label: 'Temperature', unit: '°C',
+    getList: d => d?.outdoor?.temperature?.list,
+    convert: v => +((parseFloat(v) - 32) * 5 / 9).toFixed(1),
+    color: '#ef4444', bg: 'rgba(239,68,68,.15)', border: 'rgba(239,68,68,.25)', cls: 'text-red-400',
+    icon: `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C10.35 2 9 3.35 9 5v7.59c-1.19.83-2 2.18-2 3.72C7 19.05 9.24 21.25 12 21.25s5-2.2 5-4.94c0-1.54-.81-2.89-2-3.72V5c0-1.65-1.35-3-3-3zm0 2c.55 0 1 .45 1 1v8.41l.53.35c.76.51 1.22 1.35 1.22 2.24 0 1.56-1.31 2.94-2.75 2.94S9.25 17.56 9.25 16c0-.89.46-1.73 1.22-2.24l.53-.35V5c0-.55.45-1 1-1z"/></svg>`
+  },
+  humidity: {
+    label: 'Humidity', unit: '%',
+    getList: d => d?.outdoor?.humidity?.list,
+    convert: v => parseFloat(v),
+    color: '#3b82f6', bg: 'rgba(59,130,246,.15)', border: 'rgba(59,130,246,.25)', cls: 'text-blue-400',
+    icon: `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8zm0 18c-3.35 0-6-2.57-6-6.2 0-2.34 1.95-5.44 6-9.14 4.05 3.7 6 6.79 6 9.14 0 3.63-2.65 6.2-6 6.2z"/></svg>`
+  },
+  solar: {
+    label: 'Solar Radiation', unit: 'W/m²',
+    getList: d => d?.solar_and_uvi?.solar?.list,
+    convert: v => parseFloat(v),
+    color: '#eab308', bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.25)', cls: 'text-yellow-400',
+    icon: `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 7a5 5 0 100 10A5 5 0 0012 7zm0-2a1 1 0 001-1V2a1 1 0 00-2 0v2a1 1 0 001 1zm0 14a1 1 0 00-1 1v2a1 1 0 002 0v-2a1 1 0 00-1-1zm-7-7H2a1 1 0 000 2h3a1 1 0 000-2zm17 0h-3a1 1 0 000 2h3a1 1 0 000-2z"/></svg>`
+  },
+  wind: {
+    label: 'Wind Speed', unit: 'km/h',
+    getList: d => d?.wind?.wind_speed?.list,
+    convert: v => +(parseFloat(v) * 1.60934).toFixed(1),
+    color: '#14b8a6', bg: 'rgba(20,184,166,.15)', border: 'rgba(20,184,166,.25)', cls: 'text-teal-400',
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h4a2 2 0 012 2v0a2 2 0 01-2 2h-4M5 9h10M6 13h8a2 2 0 012 2v0a2 2 0 01-2 2H6"/></svg>`
+  },
+  uvi: {
+    label: 'UV Index', unit: '',
+    getList: d => d?.solar_and_uvi?.uvi?.list,
+    convert: v => parseFloat(v),
+    color: '#a855f7', bg: 'rgba(168,85,247,.15)', border: 'rgba(168,85,247,.25)', cls: 'text-purple-400',
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/></svg>`
+  },
+  dewpoint: {
+    label: 'Dew Point', unit: '°C',
+    getList: d => d?.outdoor?.dew_point?.list,
+    convert: v => +((parseFloat(v) - 32) * 5 / 9).toFixed(1),
+    color: '#06b6d4', bg: 'rgba(6,182,212,.15)', border: 'rgba(6,182,212,.25)', cls: 'text-cyan-400',
+    icon: `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/></svg>`
+  }
+};
+
+/* ─── Chart SVG coordinate space ─── */
+const CVW = 900, CVH = 240;
+const PAD = { top: 18, right: 20, bottom: 38, left: 50 };
+const PW  = CVW - PAD.left - PAD.right;
+const PH  = CVH - PAD.top - PAD.bottom;
+
+const CIRC = 251.33;
+let isLoading = false;
+let currentVar = null;
+let _coords = [];
+
+const defaultConfig = {
+  portal_title: 'Heat Stress Monitoring System',
+  location_name: 'Monitoring Station',
+  organization_name: 'Environmental Health & Safety'
+};
+
+/* ─── Gauge ─── */
+function setGauge(id, pct, color) {
+  const el = document.getElementById(id); if (!el) return;
+  el.style.strokeDashoffset = CIRC * (1 - Math.min(1, Math.max(0, pct)));
+  el.setAttribute('stroke', color);
+}
+
+/* ─── Heat calculations ─── */
+function calcHI(tC, rh) {
+  const T = tC * 9/5 + 32; if (T < 80) return tC;
+  const R = rh;
+  let HI = -42.379 + 2.04901523*T + 10.14333127*R - 0.22475541*T*R - 0.00683783*T*T - 0.05481717*R*R + 0.00122874*T*T*R + 0.00085282*T*R*R - 0.00000199*T*T*R*R;
+  if (R < 13 && T >= 80 && T <= 112) HI -= ((13-R)/4)*Math.sqrt((17-Math.abs(T-95))/17);
+  else if (R > 85 && T >= 80 && T <= 87) HI += ((R-85)/10)*((87-T)/5);
+  return Math.round(((HI-32)*5/9)*10)/10;
+}
+function calcWBGT(tC, rh, sol, wMs) {
+  const Tw = tC * Math.atan(0.151977*Math.sqrt(rh+8.313659)) + Math.atan(tC+rh) - Math.atan(rh-1.676331) + 0.00391838*Math.pow(rh,1.5)*Math.atan(0.023101*rh) - 4.686035;
+  const Tg = tC + (sol?(sol/1000)*14:0) + (wMs?Math.max(0,3-wMs*0.4):3);
+  return Math.round((0.7*Tw + 0.2*Tg + 0.1*tC)*10)/10;
+}
+
+/* ─── Risk classifiers ─── */
+function wbgtRisk(w) {
+  if (w>33)  return {label:'Extreme Risk', color:'#ef4444', pct:Math.min(1,(w-10)/30), rec:'STOP all outdoor activities. Move to shelter immediately. Critical heat stroke risk.'};
+  if (w>=28) return {label:'High Risk',    color:'#fb7c25', pct:Math.min(1,(w-10)/30), rec:'Limit strenuous work. Hydrate every 15 min. Frequent shade breaks required.'};
+  if (w>=25) return {label:'Moderate Risk',color:'#f4c430', pct:Math.min(1,(w-10)/30), rec:'Increase water intake. Regular rest breaks. Monitor for heat stress symptoms.'};
+  return           {label:'Low Risk',     color:'#22d3a0', pct:Math.max(0,Math.min(1,(w-10)/30)), rec:'Normal activities permitted. Regular hydration. Standard precautions apply.'};
+}
+function hiRisk(h) {
+  if (h>=54) return {label:'Extreme Risk', color:'#ef4444', pct:Math.min(1,(h-10)/55), rec:'Heat stroke highly likely. Avoid all outdoor exposure. Seek cool shelter immediately.'};
+  if (h>=41) return {label:'High Risk',    color:'#fb7c25', pct:Math.min(1,(h-10)/55), rec:'Heat cramps and exhaustion likely. Limit exposure. Cool down frequently.'};
+  if (h>=27) return {label:'Moderate Risk',color:'#f4c430', pct:Math.min(1,(h-10)/55), rec:'Fatigue possible with prolonged exposure. Stay hydrated and take shade breaks.'};
+  return           {label:'Low Risk',     color:'#22d3a0', pct:Math.max(0,Math.min(1,(h-10)/55)), rec:'No significant heat stress. Normal outdoor activities are safe.'};
+}
+function uvLevel(u) {
+  if (u>=11) return {label:'Extreme',  color:'#ef4444'};
+  if (u>=8)  return {label:'Very High',color:'#fb7c25'};
+  if (u>=6)  return {label:'High',     color:'#f4c430'};
+  if (u>=3)  return {label:'Moderate', color:'#22d3a0'};
+  return           {label:'Low',       color:'#64748b'};
+}
+function windDir(deg) {
+  return ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(deg/22.5)%16];
+}
+
+/* ─── Connection status ─── */
+function setStatus(state, msg) {
+  const d = $('conn-dot'), t = $('conn-text');
+  if (state==='live') { d.className='w-2 h-2 rounded-full bg-emerald-400 live-dot flex-shrink-0'; t.textContent='Live'; t.className='text-emerald-400 hidden sm:inline'; }
+  else if (state==='error') { d.className='w-2 h-2 rounded-full bg-red-500 flex-shrink-0'; t.textContent=msg||'Error'; t.className='text-red-400 hidden sm:inline'; }
+  else { d.className='w-2 h-2 rounded-full bg-slate-600 live-dot flex-shrink-0'; t.textContent='Connecting…'; t.className='text-slate-400 hidden sm:inline'; }
+}
+
+/* ─── Live data ─── */
+async function fetchWeatherData() {
+  if (isLoading) return; isLoading = true;
+  $('refresh-icon').classList.add('spinning'); setStatus('loading');
+  try {
+    const res = await fetch(API_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    processWeather(await res.json()); setStatus('live');
+  } catch(e) { setStatus('error', e.name==='TypeError'?'Network':'Error'); }
+  finally { isLoading=false; $('refresh-icon').classList.remove('spinning'); }
+}
+
+function processWeather(apiData) {
+  try {
+    const raw = apiData?.raw_data?.data ?? apiData?.raw_data ?? apiData;
+    if (!raw?.outdoor) { setStatus('error','Bad data'); return; }
+
+    const tF = parseFloat(raw.outdoor?.temperature?.value)||0;
+    const tC = +((tF-32)*5/9).toFixed(1);
+    const rh = parseFloat(raw.outdoor?.humidity?.value)||0;
+    const sol = parseFloat(raw.solar_and_uvi?.solar?.value)||0;
+    const uvi = parseFloat(raw.solar_and_uvi?.uvi?.value)||0;
+    const wMph = parseFloat(raw.wind?.wind_speed?.value)||0;
+    const wKmh = wMph*1.60934, wMs = wMph*0.44704;
+    const wDeg = parseFloat(raw.wind?.wind_direction?.value)||0;
+    const dF = parseFloat(raw.outdoor?.dew_point?.value)||0;
+    const dC = (dF-32)*5/9;
+
+    const hi = calcHI(tC,rh), wbgt = calcWBGT(tC,rh,sol,wMs);
+
+    const wr = wbgtRisk(wbgt);
+    $('wbgt-value').textContent = wbgt.toFixed(1);
+    document.getElementById('wbgt-badge').style.color = wr.color;
+    $('wbgt-risk-text').textContent = wr.label;
+    $('wbgt-recommendation').textContent = wr.rec;
+    setGauge('wbgt-gauge', wr.pct, wr.color);
+
+    const hr = hiRisk(hi);
+    $('hi-value').textContent = hi.toFixed(1);
+    document.getElementById('hi-badge').style.color = hr.color;
+    $('hi-risk-text').textContent = hr.label;
+    $('hi-recommendation').textContent = hr.rec;
+    setGauge('hi-gauge', hr.pct, hr.color);
+
+    $('temp-value').textContent     = `${tC.toFixed(1)}°C`;
+    $('humidity-value').textContent = `${rh}%`;
+    $('solar-value').innerHTML      = `${sol} <span class="text-sm font-400">W/m²</span>`;
+    $('wind-value').innerHTML       = `${wKmh.toFixed(1)} <span class="text-sm font-400">km/h</span>`;
+    $('wind-direction').textContent = `From ${windDir(wDeg)} (${wDeg}°)`;
+    const uv = uvLevel(uvi);
+    $('uv-value').textContent = uvi;
+    const uvEl = document.getElementById('uv-level');
+    uvEl.textContent = uv.label; uvEl.style.color = uv.color;
+    $('dewpoint-value').textContent = `${dC.toFixed(1)}°C`;
+    $('last-update').textContent = new Date().toLocaleTimeString();
+
+    // Check alarm thresholds
+    checkAlarm(wbgt, hi);
+
+    // Cache for detail panel "Now" badge
+    window._now = {
+      temperature: `${tC.toFixed(1)}°C`,
+      humidity:    `${rh}%`,
+      solar:       `${sol} W/m²`,
+      wind:        `${wKmh.toFixed(1)} km/h`,
+      uvi:         `${uvi}`,
+      dewpoint:    `${dC.toFixed(1)}°C`
+    };
+  } catch(e) { console.error(e); }
+}
+
+/* ─── Detail panel ─── */
+function openDetail(varKey) {
+  currentVar = varKey;
+  const cfg = VAR[varKey];
+
+  // Setup header
+  const ico = $('detail-icon');
+  ico.style.cssText = `background:${cfg.bg};border:1px solid ${cfg.border}`;
+  ico.className = `w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.cls}`;
+  ico.innerHTML = cfg.icon;
+  $('detail-title').textContent = `${cfg.label} — 24h History`;
+  $('detail-current-val').textContent = window._now?.[varKey] || '––';
+
+  // Reset states
+  $('detail-loading').classList.remove('hidden');
+  $('detail-error').classList.add('hidden');
+  $('detail-content').classList.add('hidden');
+
+  // Slide in
+  document.getElementById('detail-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  fetchHistory(varKey);
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.body.style.overflow = '';
+  currentVar = null; _coords = [];
+}
+
+function retryDetail() { if (currentVar) openDetail(currentVar); }
+
+/* ─── History fetch ─── */
+async function fetchHistory(varKey) {
+  try {
+    const res = await fetch(HISTORY_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    parseHistory(await res.json(), varKey);
+  } catch(e) {
+    $('detail-loading').classList.add('hidden');
+    $('detail-error').classList.remove('hidden');
+    $('detail-error-msg').textContent = e.name==='TypeError' ? 'Network / CORS error' : e.message;
+  }
+}
+
+function parseHistory(apiData, varKey) {
+  try {
+    // Navigate: apiData.data.data OR apiData.data
+    const raw = apiData?.data?.data ?? apiData?.data ?? apiData;
+    const cfg  = VAR[varKey];
+    const list = cfg.getList(raw);
+
+    if (!list || typeof list !== 'object' || !Object.keys(list).length)
+      throw new Error(`No history data available for "${cfg.label}"`);
+
+    // Parse all available points first
+    const allPts = Object.entries(list)
+      .map(([ts, v]) => ({ ts: parseInt(ts), value: cfg.convert(v) }))
+      .filter(p => !isNaN(p.value));
+
+    // Anchor the 24h window to the LATEST data timestamp (not the browser clock),
+    // so the chart always ends at the most recent reading regardless of timezone.
+    const latestTs = Math.max(...allPts.map(p => p.ts));
+    const cutoff   = latestTs - 86400;
+
+    const pts = allPts
+      .filter(p => p.ts >= cutoff)
+      .sort((a, b) => a.ts - b.ts);
+
+    if (pts.length < 2) throw new Error('Fewer than 2 data points found in last 24h');
+
+    const vals = pts.map(p => p.value);
+    const minV = Math.min(...vals), maxV = Math.max(...vals);
+    const avg  = vals.reduce((a,b)=>a+b,0) / vals.length;
+    const u    = cfg.unit ? ' ' + cfg.unit : '';
+    $('stat-min').textContent   = minV.toFixed(1)+u;
+    $('stat-max').textContent   = maxV.toFixed(1)+u;
+    $('stat-avg').textContent   = avg.toFixed(1)+u;
+    $('stat-count').textContent = pts.length;
+
+    renderChart(pts, cfg);
+
+    $('detail-loading').classList.add('hidden');
+    $('detail-content').classList.remove('hidden');
+  } catch(e) {
+    $('detail-loading').classList.add('hidden');
+    $('detail-error').classList.remove('hidden');
+    $('detail-error-msg').textContent = e.message;
+  }
+}
+
+/* ─── Chart rendering ─── */
+function renderChart(pts, cfg) {
+  // Update gradient color
+  $('gradTop').setAttribute('stop-color', cfg.color);
+  $('gradBot').setAttribute('stop-color', cfg.color);
+  $('chart-line').setAttribute('stroke', cfg.color);
+  document.getElementById('svg-dot').setAttribute('fill', cfg.color);
+
+  const vals = pts.map(p => p.value);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.12 || 1;
+  const yLo = lo - pad, yHi = hi + pad;
+
+  const mapX = i  => PAD.left + (i / (pts.length-1)) * PW;
+  const mapY = v  => PAD.top  + (1 - (v-yLo)/(yHi-yLo)) * PH;
+
+  const coords = pts.map((p,i) => ({ x: mapX(i), y: mapY(p.value), ts: p.ts, value: p.value }));
+  _coords = coords;
+  window._chartCfg = cfg;
+
+  // Smooth Catmull-Rom path
+  function buildPath(pts) {
+    if (pts.length < 2) return '';
+    let d = `M ${pts[0].x},${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const cx = (pts[i-1].x + pts[i].x) / 2;
+      d += ` C ${cx},${pts[i-1].y} ${cx},${pts[i].y} ${pts[i].x},${pts[i].y}`;
+    }
+    return d;
+  }
+
+  const lineD = buildPath(coords);
+  const bottom = PAD.top + PH;
+  const areaD  = lineD + ` L ${coords[coords.length-1].x},${bottom} L ${coords[0].x},${bottom} Z`;
+
+  $('chart-area').setAttribute('d', areaD);
+  $('chart-line').setAttribute('d', lineD);
+
+  // Y-axis (5 grid lines)
+  let gridHTML = '', ylabHTML = '';
+  for (let i = 0; i <= 5; i++) {
+    const v = yLo + (yHi-yLo)*(i/5);
+    const y = mapY(v);
+    gridHTML  += `<line x1="${PAD.left}" y1="${y}" x2="${CVW-PAD.right}" y2="${y}" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>`;
+    ylabHTML  += `<text x="${PAD.left-5}" y="${y+3.5}" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="#475569">${v.toFixed(1)}</text>`;
+  }
+  $('g-grid').innerHTML  = gridHTML;
+  $('g-ylabels').innerHTML = ylabHTML;
+
+  // X-axis (every ~2h ≈ 24 labels over 288 points)
+  let xlabHTML = '';
+  const step = Math.max(1, Math.floor(pts.length / 12));
+  coords.forEach((c, i) => {
+    if (i % step !== 0 && i !== coords.length-1) return;
+    const lbl = new Date(c.ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    xlabHTML += `<text x="${c.x}" y="${CVH-4}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#475569">${lbl}</text>`;
+  });
+  $('g-xlabels').innerHTML = xlabHTML;
+}
+
+/* ─── Chart interaction ─── */
+function onChartMove(e) {
+  if (!_coords.length) return;
+  const rect = document.getElementById('chart-container').getBoundingClientRect();
+  const mx   = e.clientX - rect.left;
+  const svgX = (mx / rect.width) * CVW;
+
+  let near = 0, dist = Infinity;
+  _coords.forEach((c, i) => { const d = Math.abs(c.x - svgX); if (d < dist) { dist=d; near=i; } });
+  const pt = _coords[near], cfg = window._chartCfg;
+
+  // Crosshair
+  const ch = $('svg-ch');
+  ch.setAttribute('x1', pt.x); ch.setAttribute('x2', pt.x); ch.setAttribute('opacity','1');
+  const dot = $('svg-dot');
+  dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y); dot.setAttribute('opacity','1');
+
+  // Tooltip
+  const tt = $('chart-tooltip');
+  $('tt-time').textContent = new Date(pt.ts*1000).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  $('tt-val').textContent  = pt.value.toFixed(1) + (cfg.unit ? ' '+cfg.unit : '');
+  $('tt-val').style.color  = cfg.color;
+
+  const TTW=148, TTH=50;
+  let l = mx + 14, t = e.clientY - rect.top - TTH/2;
+  if (l + TTW > rect.width) l = mx - TTW - 14;
+  if (t < 6) t = 6;
+  if (t + TTH > rect.height-6) t = rect.height - TTH - 6;
+  tt.style.left = l+'px'; tt.style.top = t+'px';
+  tt.classList.add('show');
+}
+
+function onChartTouch(e) {
+  e.preventDefault();
+  if (e.touches[0]) onChartMove(e.touches[0]);
+}
+
+function onChartLeave() {
+  $('svg-ch').setAttribute('opacity','0');
+  $('svg-dot').setAttribute('cx','-100'); $('svg-dot').setAttribute('cy','-100');
+  $('chart-tooltip').classList.remove('show');
+}
+
+
+/* ═══════════════════════════════════════
+   ALARM SYSTEM
+═══════════════════════════════════════ */
+
+// Thresholds — alarm fires when either is reached
+const ALARM_THRESHOLDS = {
+  wbgt: 33,   // fire when WBGT > 33°C
+  hi:   41    // fire when HI > 41°C
+};
+
+let alarmArmed    = false;   // user has armed the alarm
+let alarmFiring   = false;   // alarm is currently sounding
+let alarmSnoozed  = false;   // snooze active
+let snoozeTimer   = null;
+let alarmCtx      = null;    // Web Audio context
+let alarmNodes    = [];      // active oscillator nodes
+let alarmInterval = null;    // repeating beep interval
+
+// Lazily create AudioContext on first user interaction
+function getAudioCtx() {
+  if (!alarmCtx) alarmCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return alarmCtx;
+}
+
+/* ── Play a two-tone alarm beep pattern ── */
+function playAlarmBeep() {
+  try {
+    const ctx  = getAudioCtx();
+    const now  = ctx.currentTime;
+
+    // Three-beep pattern: high-low-high at 880/660 Hz
+    const pattern = [
+      { freq: 880, start: 0,    dur: 0.12 },
+      { freq: 660, start: 0.15, dur: 0.12 },
+      { freq: 880, start: 0.30, dur: 0.18 }
+    ];
+
+    pattern.forEach(({ freq, start, dur }) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + start);
+      gain.gain.setValueAtTime(0, now + start);
+      gain.gain.linearRampToValueAtTime(0.35, now + start + 0.01);
+      gain.gain.setValueAtTime(0.35, now + start + dur - 0.02);
+      gain.gain.linearRampToValueAtTime(0, now + start + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.05);
+    });
+  } catch (e) { console.warn('[Alarm] Audio error:', e); }
+}
+
+/* ── Start continuous alarm (repeats every 4 seconds) ── */
+function startAlarmSound() {
+  stopAlarmSound();
+  playAlarmBeep();
+  alarmInterval = setInterval(playAlarmBeep, 4000);
+}
+
+/* ── Stop all alarm sounds ── */
+function stopAlarmSound() {
+  if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+}
+
+/* ── Toggle arm/disarm ── */
+function toggleAlarm() {
+  // Resume AudioContext if suspended (browser autoplay policy)
+  if (alarmCtx && alarmCtx.state === 'suspended') alarmCtx.resume();
+
+  alarmArmed = !alarmArmed;
+  const btn = $('alarm-toggle');
+
+  if (alarmArmed) {
+    btn.classList.add('armed');
+    btn.title = 'Heat Alarm ARMED — click to disarm';
+    showToast('🔔 Heat alarm armed', '#22d3a0');
+    // If already in alarming condition, fire immediately
+    if (window._lastAlarmState && window._lastAlarmState !== 'ok') {
+      triggerAlarm(window._lastAlarmMsg || 'Threshold exceeded');
+    }
+  } else {
+    btn.classList.remove('armed', 'alarming');
+    btn.title = 'Heat Alarm (click to arm)';
+    dismissAlarm(true);
+    showToast('🔕 Heat alarm disarmed', '#64748b');
+  }
+}
+
+/* ── Check thresholds after each data update ── */
+function checkAlarm(wbgt, hi) {
+  let state = 'ok', msg = '';
+
+  // Fire only when WBGT > 33°C or HI > 41°C
+  if (wbgt > ALARM_THRESHOLDS.wbgt || hi > ALARM_THRESHOLDS.hi) {
+    state = 'danger';
+    const parts = [];
+    if (wbgt > ALARM_THRESHOLDS.wbgt) parts.push(`WBGT ${wbgt.toFixed(1)}°C (threshold: >33°C)`);
+    if (hi   > ALARM_THRESHOLDS.hi)   parts.push(`Heat Index ${hi.toFixed(1)}°C (threshold: >41°C)`);
+    msg = `⚠ HEAT DANGER — ${parts.join(' · ')}. Stop all strenuous outdoor activities. Move to shade or a cool area immediately.`;
+  }
+
+  // Cache for use when alarm is armed after the fact
+  window._lastAlarmState = state;
+  window._lastAlarmMsg   = msg;
+
+  if (!alarmArmed || alarmSnoozed || state === 'ok') {
+    // Auto-clear firing state if conditions improved
+    if (state === 'ok' && alarmFiring) dismissAlarm(true);
+    return;
+  }
+
+  // Trigger if threshold exceeded and not already firing
+  if (state !== 'ok' && !alarmFiring) {
+    triggerAlarm(msg);
+  }
+}
+
+/* ── Fire the alarm ── */
+function triggerAlarm(msg) {
+  alarmFiring = true;
+  $('alarm-msg').textContent = msg;
+
+  // Show banner via CSS transition
+  $('alarm-banner').classList.add('show');
+
+  // Button glow
+  const btn = $('alarm-toggle');
+  btn.classList.remove('armed');
+  btn.classList.add('alarming');
+
+  // Sound
+  startAlarmSound();
+}
+
+/* ── Dismiss ── */
+function dismissAlarm(silent = false) {
+  alarmFiring = false;
+  stopAlarmSound();
+
+  $('alarm-banner').classList.remove('show');
+
+  const btn = $('alarm-toggle');
+  btn.classList.remove('alarming');
+  if (alarmArmed) btn.classList.add('armed');
+}
+
+/* ── Snooze for 10 minutes ── */
+function snoozeAlarm() {
+  dismissAlarm();
+  alarmSnoozed = true;
+  showToast('⏱ Alarm snoozed for 10 minutes', '#f4c430');
+  if (snoozeTimer) clearTimeout(snoozeTimer);
+  snoozeTimer = setTimeout(() => {
+    alarmSnoozed = false;
+    // Re-check immediately after snooze expires
+    if (alarmArmed && window._lastAlarmState && window._lastAlarmState !== 'ok') {
+      triggerAlarm(window._lastAlarmMsg);
+    }
+  }, 600_000); // 10 minutes
+}
+
+/* ── Small toast notification ── */
+let toastTimer = null;
+function showToast(msg, color = '#38bdf8') {
+  let toast = document.getElementById('heat-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'heat-toast';
+    toast.style.cssText = `
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      z-index:300; padding:8px 18px; border-radius:999px;
+      font-family:'JetBrains Mono',monospace; font-size:.75rem; font-weight:600;
+      backdrop-filter:blur(16px); background:rgba(13,20,36,.95);
+      border:1px solid rgba(255,255,255,.1);
+      box-shadow:0 4px 24px rgba(0,0,0,.5);
+      transition:opacity .3s ease, transform .3s ease;
+      pointer-events:none;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.color = color;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(8px)';
+  }, 2800);
+}
+
+/* ─── SDK ─── */
+function applyConfig(cfg) {
+  $('portal-title').textContent       = cfg.portal_title       || defaultConfig.portal_title;
+  $('location-name').textContent      = cfg.location_name      || defaultConfig.location_name;
+  $('organization-name').textContent  = cfg.organization_name  || defaultConfig.organization_name;
+}
+if (window.elementSdk) {
+  window.elementSdk.init({
+    defaultConfig,
+    onConfigChange: cfg => applyConfig(cfg),
+    mapToCapabilities: () => ({recolorables:[],borderables:[],fontEditable:undefined,fontSizeable:undefined}),
+    mapToEditPanelValues: cfg => new Map([
+      ['portal_title',      cfg.portal_title      || defaultConfig.portal_title],
+      ['location_name',     cfg.location_name     || defaultConfig.location_name],
+      ['organization_name', cfg.organization_name || defaultConfig.organization_name]
+    ])
+  });
+}
+
+function $(id) { return document.getElementById(id); }
+function refreshData() { fetchWeatherData(); }
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+
+// Init
+applyConfig(defaultConfig);
+fetchWeatherData();
+
+// Schedule at 5-min clock marks
+(function scheduleNext() {
+  const now = new Date();
+  const ms = ((Math.ceil((now.getMinutes()+1)/5)*5 - now.getMinutes())*60 - now.getSeconds())*1000 - now.getMilliseconds();
+  setTimeout(() => { fetchWeatherData(); setInterval(fetchWeatherData, 300_000); }, ms);
+})();
+</script>
+
+  <!-- ALARM BANNER -->
+  <div id="alarm-banner" role="alert" aria-live="assertive">
+    <div class="flex items-start gap-3">
+      <div class="pulse-dot mt-1"></div>
+      <div class="flex-1 min-w-0">
+        <p class="syne text-sm font-700 text-red-400 mb-0.5">⚠ Heat Stress Alert</p>
+        <p id="alarm-msg" class="text-xs text-slate-300 leading-relaxed"></p>
+      </div>
+      <button onclick="dismissAlarm()" title="Dismiss"
+              class="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="flex items-center gap-2 mt-3">
+      <button onclick="snoozeAlarm()" class="flex-1 text-xs py-1.5 rounded-lg text-slate-300 hover:text-white transition-colors" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)">
+        Snooze 10 min
+      </button>
+      <button onclick="dismissAlarm()" class="flex-1 text-xs py-1.5 rounded-lg text-red-400 hover:text-red-300 transition-colors" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2)">
+        Dismiss
+      </button>
+    </div>
+  </div>
+
+</body>
+</html>
