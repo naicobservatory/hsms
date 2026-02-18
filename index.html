@@ -822,7 +822,7 @@
     </section>
 
     <footer class="text-center text-xs text-slate-600 pb-8 fade-up" style="animation-delay:.56s">
-      Data automatically updates every 5 minutes. For official Heat Index advisories, please refer to DOST-PAGASA.
+      Data automatically updates every 5 minutes · WBGT from dedicated black globe sensor · For official Heat Index advisories, please refer to DOST-PAGASA.
     </footer>
   </main>
 </div>
@@ -935,7 +935,7 @@
 ═════════════════════════════════════════ -->
 <script>
 /* ─── API endpoints ─── */
-const API_URL     = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLjfqsl7Gw99zU6yqCgUdk5-y2H_LZOwVq6tHhigjc5FQD4I-WNWzexYArTmy-mGCHdAt2qTdouDkFg_qVgxSEph1SG2g-x8XXauLsthy6AIbTbxHkrHGDVwi7jPoHkHrS6SIX5KnSvlPdtWrO91Om2NxWKYqynahpdzsvHOy6dGmK5ELxtnh2WJRyKnp3kSbR9RfeaKzEhVSpeCP8_h29rl9T5fECHNTmfhv3NIzimsAeI3XWCo_GM7hZzLL_Kl_zMq5Mv9aw7hf8CP_DmJ13r4mQCnPIrid6Pjv3gM&lib=MTbhs9Zv5KTG9ImKpSDDDPCIObk80Qa1W';
+const API_URL     = 'https://script.googleusercontent.com/macros/echo?user_content_key=AY5xjrQNVWBzA3cFbrbFaGdf1ErdVWGXpESBZpfr-he6WWLyDSPVNTqPoD7tOpepczUbCwjfI49A9wKqQUK5gI6nO6CfSL0IYTCfqY6rlbBklqKT_fM6okwWWgSYlcHC67Ytvu34zm15_7CqWPEQizwJGFy00lEDai77DnGq5TmoDehrNpQNvlslQMG3JfVUs9GO3FwolUvCgJE3wN_P6ecT-gbsVrB5_-w4hpdY1I9HdG13rsPu82L-g8YL0H26CqrP3IIpeK78rYwyWKQD0rwpBHFLWtWXay8QHSrFcZ6Z&lib=MTbhs9Zv5KTG9ImKpSDDDPCIObk80Qa1W';
 const HISTORY_URL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLit4rOGc_9hvEeAMwV4AmTiQ4BNcjtzKSmq-tE_d49I2YcJQ2hGne3oaGpmXglNg69UqC0_F6p2M3ZbbEYGe1b0dZ4KVrdUSOuEIiHFNd9i7R9Ru1pbETj3xfEPkvLkJXn0Mmc7exaJKBMc4lnFeefchQk7J_gw0EGn7RSqQmyJXUqMdLDjkTGQDX8xzkzrBXBy9VII9vSVuTWFTGG_SNNFQJQLaEvj675CfZIgmDZ7O86bUE4HrvIhjer9JXfkgER-2GWaOwg261s1IRcq6DlDTMECpw&lib=MInCaCyrkr9R8O7NXafX6HoCtwaES1gvt';
 
 /* ─── Variable definitions ─── */
@@ -1017,6 +1017,8 @@ function calcHI(tC, rh) {
   else if (R > 85 && T >= 80 && T <= 87) HI += ((R-85)/10)*((87-T)/5);
   return Math.round(((HI-32)*5/9)*10)/10;
 }
+// NOTE: calcWBGT function kept for reference only. 
+// WBGT is now read directly from dedicated black globe temperature sensor.
 function calcWBGT(tC, rh, sol, wMs) {
   const Tw = tC * Math.atan(0.151977*Math.sqrt(rh+8.313659)) + Math.atan(tC+rh) - Math.atan(rh-1.676331) + 0.00391838*Math.pow(rh,1.5)*Math.atan(0.023101*rh) - 4.686035;
   const Tg = tC + (sol?(sol/1000)*14:0) + (wMs?Math.max(0,3-wMs*0.4):3);
@@ -1083,7 +1085,10 @@ function processWeather(apiData) {
     const dF = parseFloat(raw.outdoor?.dew_point?.value)||0;
     const dC = (dF-32)*5/9;
 
-    const hi = calcHI(tC,rh), wbgt = calcWBGT(tC,rh,sol,wMs);
+    // Extract WBGT directly from dedicated sensor (provided in °F, convert to °C)
+    const wbgtF = parseFloat(raw.black_globe_temperature?.wbgt?.value) || 0;
+    const wbgt = wbgtF > 0 ? +((wbgtF - 32) * 5 / 9).toFixed(1) : 0;
+    const hi = calcHI(tC,rh);
 
     const wr = wbgtRisk(wbgt);
     $('wbgt-value').textContent = wbgt.toFixed(1);
